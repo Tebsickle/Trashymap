@@ -255,29 +255,72 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                   ),
                 ),
                 const SizedBox(width: 32),
-                // Menu button (center, bigger)
-                SizedBox(
-                  width: 72,
-                  height: 72,
-                  child: FloatingActionButton(
-                    heroTag: 'menu',
-                    onPressed: _showMenu,
-                    backgroundColor: Colors.white,
-                    shape: const CircleBorder(),
-                    child: const Icon(Icons.menu, color: Colors.black, size: 48),
-                    elevation: 8,
-                  ),
+                // Menu button (center, bigger, dual-purpose with color and icon change)
+                Builder(
+                  builder: (context) {
+                    bool nearTrashcan = false;
+                    if (_position != null && _locations.isNotEmpty) {
+                      final user = LatLng(_position!.latitude, _position!.longitude);
+                      for (final loc in _locations) {
+                        final dist = Distance().as(LengthUnit.Meter, user, loc);
+                        if (dist < 30) {
+                          nearTrashcan = true;
+                          break;
+                        }
+                      }
+                    }
+                    Color buttonColor = nearTrashcan ? Colors.red : Colors.yellow[700]!;
+                    Icon buttonIcon = nearTrashcan
+                        ? const Icon(Icons.help_outline, color: Colors.white, size: 48) // question mark
+                        : const Icon(Icons.priority_high, color: Colors.white, size: 48); // exclamation mark
+                    return SizedBox(
+                      width: 72,
+                      height: 72,
+                      child: FloatingActionButton(
+                        heroTag: 'menu',
+                        onPressed: () {
+                          if (nearTrashcan) {
+                            // Remove the nearest trashcan marker
+                            if (_position != null && _locations.isNotEmpty) {
+                              final user = LatLng(_position!.latitude, _position!.longitude);
+                              int? nearestIdx;
+                              double minDist = double.infinity;
+                              for (int i = 0; i < _locations.length; i++) {
+                                final dist = Distance().as(LengthUnit.Meter, user, _locations[i]);
+                                if (dist < minDist) {
+                                  minDist = dist;
+                                  nearestIdx = i;
+                                }
+                              }
+                              if (nearestIdx != null && minDist < 30) {
+                                setState(() {
+                                  _locations.removeAt(nearestIdx!);
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Trashcan marker removed.')),
+                                );
+                              }
+                            }
+                          } else {
+                            reportLocation();
+                          }
+                        },
+                        backgroundColor: buttonColor,
+                        shape: const CircleBorder(),
+                        child: buttonIcon,
+                        elevation: 8,
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(width: 32),
-                // Profile button (right, normal size)
+                // Profile button (right, normal size, opens menu)
                 SizedBox(
                   width: 56,
                   height: 56,
                   child: FloatingActionButton(
                     heroTag: 'profile',
-                    onPressed: () {
-                      // TODO: Switch to profile tab
-                    },
+                    onPressed: _showMenu,
                     backgroundColor: Colors.white,
                     shape: const CircleBorder(),
                     child: const Icon(Icons.person, size: 32, color: Colors.blue),
