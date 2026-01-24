@@ -2,7 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+
 import 'package:geolocator/geolocator.dart';
+import 'dart:math' as math;
+import 'package:trashymap/cone_painter.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 
 
 void main() {
@@ -34,12 +38,13 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMixin {
+    double? _heading;
   Position? _position;
   String? _error;
   Stream<Position>? _positionStream;
   late final MapController _mapController;
 
-  List<LatLng> _locations = [];
+  final List<LatLng> _locations = [];
 
   void reportLocation() {
     if (_position == null) return;
@@ -130,6 +135,13 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
       parent: _menuController,
       curve: Curves.easeOutCubic,
     ));
+
+    // Listen to compass heading
+    FlutterCompass.events?.listen((event) {
+      setState(() {
+        _heading = event.heading;
+      });
+    });
   }
 
   void _showMenu() {
@@ -198,31 +210,56 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
             MarkerLayer(
               markers: [
                 Marker(
-                  width: 24.0,
-                  height: 24.0,
+                  width: 48.0,
+                  height: 48.0,
                   point: LatLng(_position!.latitude, _position!.longitude),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.blue.withOpacity(0.5),
-                          blurRadius: 6,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Cone of visibility (larger, more visible)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Transform.rotate(
+                          angle: ((_heading ?? 0) * (math.pi / 180) + (1.4 * math.pi)),
+                          child: CustomPaint(
+                            size: const Size(48, 80),
+                            painter: ConePainter(
+                              startColor: const Color(0xCC1976D2),
+                              endColor: const Color(0x001976D2),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      // User pin
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Colors.blue,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.blue.withOpacity(0.5),
+                              blurRadius: 6,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
