@@ -22,3 +22,12 @@ samples, guidance on mobile development, and a full API reference.
 
 - Run `http-server ./build/web -S -C cert/cert.pem -K cert/key.pem -p 50000 --host 0.0.0.0`
 
+## TO RUN AS AN ANDROID APP:
+
+- Run `flutter build apk`
+
+- Open the android emulator.
+
+- Run `flutter run` (ANDROID EMULATOR MUST BE OPEN).
+
+- Look in android emulator.
