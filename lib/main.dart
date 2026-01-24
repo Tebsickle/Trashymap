@@ -229,105 +229,107 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
             ),
           ],
         ),
-        // Shop, Menu, and Profile buttons centered at bottom
+        // Pill-shaped segmented control at bottom
         if (!_menuOpen)
           Positioned(
             left: 0,
             right: 0,
-            bottom: 32,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Shop button (left, normal size)
-                SizedBox(
-                  width: 56,
-                  height: 56,
-                  child: FloatingActionButton(
-                    heroTag: 'shop',
-                    onPressed: () {
-                      // TODO: Switch to shop tab
-                    },
-                    backgroundColor: Colors.white,
-                    shape: const CircleBorder(),
-                    child: const Icon(Icons.store, size: 32, color: Colors.green),
-                    elevation: 6,
-                  ),
-                ),
-                const SizedBox(width: 32),
-                // Menu button (center, bigger, dual-purpose with color and icon change)
-                Builder(
-                  builder: (context) {
-                    bool nearTrashcan = false;
-                    if (_position != null && _locations.isNotEmpty) {
-                      final user = LatLng(_position!.latitude, _position!.longitude);
-                      for (final loc in _locations) {
-                        final dist = Distance().as(LengthUnit.Meter, user, loc);
-                        if (dist < 30) {
-                          nearTrashcan = true;
-                          break;
-                        }
-                      }
+            bottom: 24,
+            child: Builder(
+              builder: (context) {
+                bool nearTrashcan = false;
+                if (_position != null && _locations.isNotEmpty) {
+                  final user = LatLng(_position!.latitude, _position!.longitude);
+                  for (final loc in _locations) {
+                    final dist = Distance().as(LengthUnit.Meter, user, loc);
+                    if (dist < 30) {
+                      nearTrashcan = true;
+                      break;
                     }
-                    Color buttonColor = nearTrashcan ? Colors.red : Colors.yellow[700]!;
-                    Icon buttonIcon = nearTrashcan
-                        ? const Icon(Icons.help_outline, color: Colors.white, size: 48) // question mark
-                        : const Icon(Icons.priority_high, color: Colors.white, size: 48); // exclamation mark
-                    return SizedBox(
-                      width: 72,
-                      height: 72,
-                      child: FloatingActionButton(
-                        heroTag: 'menu',
-                        onPressed: () {
-                          if (nearTrashcan) {
-                            // Remove the nearest trashcan marker
-                            if (_position != null && _locations.isNotEmpty) {
-                              final user = LatLng(_position!.latitude, _position!.longitude);
-                              int? nearestIdx;
-                              double minDist = double.infinity;
-                              for (int i = 0; i < _locations.length; i++) {
-                                final dist = Distance().as(LengthUnit.Meter, user, _locations[i]);
-                                if (dist < minDist) {
-                                  minDist = dist;
-                                  nearestIdx = i;
+                  }
+                }
+                Color centerColor = nearTrashcan ? Colors.red : Colors.yellow[700]!;
+                Icon centerIcon = nearTrashcan
+                    ? const Icon(Icons.help_outline, color: Colors.white, size: 48)
+                    : const Icon(Icons.priority_high, color: Colors.white, size: 48);
+                return Center(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(56),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.10),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Shop segment
+                        IconButton(
+                          icon: const Icon(Icons.store, color: Colors.green, size: 36),
+                          splashRadius: 36,
+                          iconSize: 36,
+                          onPressed: () {
+                            // TODO: Switch to shop tab
+                          },
+                        ),
+                        // Center segment (dual-purpose)
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: centerColor,
+                            borderRadius: BorderRadius.circular(40),
+                          ),
+                          child: IconButton(
+                            icon: centerIcon,
+                            splashRadius: 44,
+                            iconSize: 48,
+                            onPressed: () {
+                              if (nearTrashcan) {
+                                // Remove the nearest trashcan marker
+                                if (_position != null && _locations.isNotEmpty) {
+                                  final user = LatLng(_position!.latitude, _position!.longitude);
+                                  int? nearestIdx;
+                                  double minDist = double.infinity;
+                                  for (int i = 0; i < _locations.length; i++) {
+                                    final dist = Distance().as(LengthUnit.Meter, user, _locations[i]);
+                                    if (dist < minDist) {
+                                      minDist = dist;
+                                      nearestIdx = i;
+                                    }
+                                  }
+                                  if (nearestIdx != null && minDist < 30) {
+                                    setState(() {
+                                      _locations.removeAt(nearestIdx!);
+                                    });
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Trashcan marker removed.')),
+                                    );
+                                  }
                                 }
+                              } else {
+                                reportLocation();
                               }
-                              if (nearestIdx != null && minDist < 30) {
-                                setState(() {
-                                  _locations.removeAt(nearestIdx!);
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Trashcan marker removed.')),
-                                );
-                              }
-                            }
-                          } else {
-                            reportLocation();
-                          }
-                        },
-                        backgroundColor: buttonColor,
-                        shape: const CircleBorder(),
-                        child: buttonIcon,
-                        elevation: 8,
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(width: 32),
-                // Profile button (right, normal size, opens menu)
-                SizedBox(
-                  width: 56,
-                  height: 56,
-                  child: FloatingActionButton(
-                    heroTag: 'profile',
-                    onPressed: _showMenu,
-                    backgroundColor: Colors.white,
-                    shape: const CircleBorder(),
-                    child: const Icon(Icons.person, size: 32, color: Colors.blue),
-                    elevation: 6,
+                            },
+                          ),
+                        ),
+                        // Profile segment
+                        IconButton(
+                          icon: const Icon(Icons.person, color: Colors.blue, size: 36),
+                          splashRadius: 36,
+                          iconSize: 36,
+                          onPressed: _showMenu,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                );
+              },
             ),
           ),
         // Custom pull-up menu overlay
