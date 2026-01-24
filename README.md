@@ -31,3 +31,10 @@ samples, guidance on mobile development, and a full API reference.
 - Run `flutter run` (ANDROID EMULATOR MUST BE OPEN).
 
 - Look in android emulator.
+
+
+### TODO:
+
+- Make the data save between app starts/phone reboots?
+
+- MAKE REMOVE MARKER BUTTON FUNCTIONALITY
