@@ -181,7 +181,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
           mapController: _mapController,
           options: MapOptions(
             initialCenter: LatLng(_position!.latitude, _position!.longitude),
-            initialZoom: 15.0,
+            initialZoom: 18.0,
             interactionOptions: const InteractionOptions(
               flags: InteractiveFlag.all,
             ),
