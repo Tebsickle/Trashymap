@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 
+
 void main() {
   runApp(const MapApp());
 }
@@ -37,6 +38,18 @@ class _MapScreenState extends State<MapScreen> {
   String? _error;
   Stream<Position>? _positionStream;
   late final MapController _mapController;
+
+  List<LatLng> _locations = [];
+
+  void reportLocation() {
+    if (_position == null) return;
+    setState(() {
+      _locations.add(LatLng(_position!.latitude, _position!.longitude));
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Location reported!')),
+    );
+  }
 
   @override
   void initState() {
@@ -138,9 +151,10 @@ class _MapScreenState extends State<MapScreen> {
             ),
             MarkerLayer(
               markers: [
+                // User's current location (smaller marker)
                 Marker(
-                  width: 40.0,
-                  height: 40.0,
+                  width: 24.0,
+                  height: 24.0,
                   point: LatLng(_position!.latitude, _position!.longitude),
                   child: Container(
                     decoration: BoxDecoration(
@@ -149,15 +163,15 @@ class _MapScreenState extends State<MapScreen> {
                       boxShadow: [
                         BoxShadow(
                           color: Colors.blue.withOpacity(0.5),
-                          blurRadius: 10,
+                          blurRadius: 6,
                           spreadRadius: 1,
                         ),
                       ],
                     ),
                     child: Center(
                       child: Container(
-                        width: 16,
-                        height: 16,
+                        width: 10,
+                        height: 10,
                         decoration: const BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
@@ -166,6 +180,25 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                   ),
                 ),
+                // Locally reported markers (trashcans, larger)
+                ..._locations.map((loc) => Marker(
+                  width: 36.0,
+                  height: 36.0,
+                  point: loc,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.withOpacity(0.5),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                )),
               ],
             ),
           ],
@@ -244,7 +277,7 @@ class _MapScreenState extends State<MapScreen> {
                                   ),
                                 ),
                                 onPressed: () {
-                                  // TODO: Implement report missing trashcan
+                                  reportLocation();
                                 },
                                 child: const Text(
                                   'Report missing trashcan',
@@ -263,8 +296,11 @@ class _MapScreenState extends State<MapScreen> {
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                 ),
-                                onPressed: () {
-                                  // TODO: Implement trashcan not here
+                                onPressed: () async {
+                                  // Optionally, you could implement a delete or flag endpoint
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Feature not implemented.')),
+                                  );
                                 },
                                 child: const Text(
                                   'Trashcan not here',
