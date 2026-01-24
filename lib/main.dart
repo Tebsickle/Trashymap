@@ -116,23 +116,23 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     }
   }
 
-  bool _menuOpen = false;
-  late final AnimationController _menuController;
-  late final Animation<Offset> _menuOffset;
+  bool _profileOpen = false;
+  late final AnimationController _profileController;
+  late final Animation<Offset> _profileOffset;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Animation setup
-    _menuController = AnimationController(
+    _profileController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 350),
     );
-    _menuOffset = Tween<Offset>(
+    _profileOffset = Tween<Offset>(
       begin: const Offset(0, 1),
       end: Offset.zero,
     ).animate(CurvedAnimation(
-      parent: _menuController,
+      parent: _profileController,
       curve: Curves.easeOutCubic,
     ));
 
@@ -144,18 +144,18 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     });
   }
 
-  void _showMenu() {
+  void _showProfile() {
     setState(() {
-      _menuOpen = true;
+      _profileOpen = true;
     });
-    _menuController.forward();
+    _profileController.forward();
   }
 
-  void _closeMenu() {
-    _menuController.reverse().then((_) {
+  void _closeProfile() {
+    _profileController.reverse().then((_) {
       if (mounted) {
         setState(() {
-          _menuOpen = false;
+          _profileOpen = false;
         });
       }
     });
@@ -163,7 +163,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
   @override
   void dispose() {
-    _menuController.dispose();
+    _profileController.dispose();
     super.dispose();
   }
 
@@ -267,7 +267,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
           ],
         ),
         // Pill-shaped segmented control at bottom
-        if (!_menuOpen)
+        if (!_profileOpen)
           Positioned(
             left: 0,
             right: 0,
@@ -360,7 +360,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                           icon: const Icon(Icons.person, color: Colors.blue, size: 36),
                           splashRadius: 36,
                           iconSize: 36,
-                          onPressed: _showMenu,
+                          onPressed: _showProfile,
                         ),
                       ],
                     ),
@@ -370,18 +370,18 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
             ),
           ),
         // Custom pull-up menu overlay
-        if (_menuOpen)
+        if (_profileOpen)
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             top: MediaQuery.of(context).size.height * 0.2, // 80% height
             child: SlideTransition(
-              position: _menuOffset,
+              position: _profileOffset,
               child: GestureDetector(
                 onVerticalDragUpdate: (details) {
                   if (details.primaryDelta != null && details.primaryDelta! > 10) {
-                    _closeMenu();
+                    _closeProfile();
                   }
                 },
                 child: Material(
@@ -400,76 +400,50 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                         ),
                       ),
                       const SizedBox(height: 24),
-                      const Text(
-                        'Custom Menu',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 16),
-                      // Menu content: Large action buttons
+                      // ...existing code...
+                      // Profile menu content
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(
-                                width: double.infinity,
-                                height: 80,
-                                child: Builder(
-                                  builder: (context) {
-                                    // Check if user is near a trashcan (within 30 meters)
-                                    bool nearTrashcan = false;
-                                    if (_position != null && _locations.isNotEmpty) {
-                                      final user = LatLng(_position!.latitude, _position!.longitude);
-                                      for (final loc in _locations) {
-                                        final dist = Distance().as(LengthUnit.Meter, user, loc);
-                                        if (dist < 30) {
-                                          nearTrashcan = true;
-                                          break;
-                                        }
-                                      }
-                                    }
-                                    return ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: nearTrashcan ? Colors.red : Colors.blue,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                      ),
-                                      onPressed: () {
-                                        if (nearTrashcan) {
-                                          // Remove the nearest trashcan marker
-                                          if (_position != null && _locations.isNotEmpty) {
-                                            final user = LatLng(_position!.latitude, _position!.longitude);
-                                            int? nearestIdx;
-                                            double minDist = double.infinity;
-                                            for (int i = 0; i < _locations.length; i++) {
-                                              final dist = Distance().as(LengthUnit.Meter, user, _locations[i]);
-                                              if (dist < minDist) {
-                                                minDist = dist;
-                                                nearestIdx = i;
-                                              }
-                                            }
-                                            if (nearestIdx != null && minDist < 30) {
-                                              setState(() {
-                                                _locations.removeAt(nearestIdx!);
-                                              });
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text('Trashcan marker removed.')),
-                                              );
-                                            }
-                                          }
-                                        } else {
-                                          reportLocation();
-                                        }
-                                      },
+                              Column(
+                                children: [
+                                  const SizedBox(height: 8),
+                                  Center(
+                                    child: CircleAvatar(
+                                      radius: 40,
+                                      backgroundColor: Colors.blueAccent,
+                                      child: const Icon(Icons.person, size: 48, color: Colors.white),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Center(
+                                    child: Text(
+                                      '@UserName',
+                                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Divider(thickness: 1.5),
+                                  const SizedBox(height: 24),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+                                    child: Center(
                                       child: Text(
-                                        nearTrashcan ? 'Missing Trashcan' : 'Submit New Trashcan',
-                                        style: const TextStyle(fontSize: 28, color: Colors.white, fontWeight: FontWeight.bold),
+                                        'You have nothing in your wardrobe yet!',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[500],
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                        textAlign: TextAlign.center,
                                       ),
-                                    );
-                                  },
-                                ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -479,7 +453,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                       Padding(
                         padding: const EdgeInsets.only(bottom: 32.0, top: 8.0),
                         child: GestureDetector(
-                          onTap: _closeMenu,
+                          onTap: _closeProfile,
                           child: Container(
                             width: 64,
                             height: 64,
