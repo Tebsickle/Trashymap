@@ -8,6 +8,7 @@ import 'dart:math' as math;
 import 'package:trashymap/cone_painter.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 
 void main() {
@@ -38,7 +39,7 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMixin {
+class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       // Shop overlay state and animation
       bool _shopOpen = false;
       late final AnimationController _shopController;
@@ -63,7 +64,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     double? _heading;
   Position? _position;
   String? _error;
-  Stream<Position>? _positionStream;
+  StreamSubscription<Position>? _positionSubscription;
   late final MapController _mapController;
 
   final List<LatLng> _locations = [];
@@ -151,17 +152,29 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     _mapController = MapController();
     _loadLocations();
     _determinePosition();
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 0, // update as frequently as possible
-      ),
-    );
-    _positionStream!.listen((Position pos) {
-      setState(() {
-        _position = pos;
-      });
-      _mapController.move(LatLng(pos.latitude, pos.longitude), _mapController.camera.zoom);
+    // Remove position stream, use polling instead
+    Position? lastPosition;
+    Timer.periodic(const Duration(seconds: 1), (timer) async {
+      try {
+        final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.bestForNavigation);
+        if (lastPosition == null ||
+          (pos.latitude != lastPosition?.latitude ||
+           pos.longitude != lastPosition?.longitude)) {
+          print('Polled new position: ${pos.latitude}, ${pos.longitude}');
+          setState(() {
+            _position = pos;
+          });
+          _mapController.move(LatLng(pos.latitude, pos.longitude), _mapController.camera.zoom);
+          lastPosition = pos;
+        }
+      } catch (e) {
+        print('Polling position error: $e');
+      }
+    });
+
+    // Debug: print current _position every second
+    Timer.periodic(const Duration(seconds: 1), (timer) {
+      print('_position is: ${_position?.latitude}, ${_position?.longitude}');
     });
 
     // Animation setup
@@ -216,6 +229,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
   @override
   void dispose() {
+    _positionSubscription?.cancel();
     _profileController.dispose();
     _shopController.dispose();
     super.dispose();
@@ -271,59 +285,60 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
             // User's current location (always on top)
             MarkerLayer(
               markers: [
-                Marker(
-                  width: 48.0,
-                  height: 48.0,
-                  point: LatLng(_position!.latitude, _position!.longitude),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Cone of visibility (larger, more visible)
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: Transform.rotate(
-                          angle: ((_heading ?? 0) * (math.pi / 180) + (1.4 * math.pi)),
-                          child: CustomPaint(
-                            size: const Size(48, 80),
-                            painter: ConePainter(
-                              startColor: const Color(0xCC1976D2),
-                              endColor: const Color(0x001976D2),
+                if (_position != null)
+                  Marker(
+                    width: 48.0,
+                    height: 48.0,
+                    point: LatLng(_position!.latitude, _position!.longitude),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Cone of visibility (larger, more visible)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: Transform.rotate(
+                            angle: ((_heading ?? 0) * (math.pi / 180) + (1.4 * math.pi)),
+                            child: CustomPaint(
+                              size: const Size(48, 80),
+                              painter: ConePainter(
+                                startColor: const Color(0xCC1976D2),
+                                endColor: const Color(0x001976D2),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      // User pin
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: Colors.blue,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.blue.withOpacity(0.5),
-                              blurRadius: 6,
-                              spreadRadius: 1,
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Container(
-                            width: 10,
-                            height: 10,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
+                        // User pin
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: Colors.blue,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.blue.withOpacity(0.5),
+                                blurRadius: 6,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
           ],
