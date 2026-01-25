@@ -39,6 +39,27 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMixin {
+      // Shop overlay state and animation
+      bool _shopOpen = false;
+      late final AnimationController _shopController;
+      late final Animation<Offset> _shopOffset;
+
+      void _showShop() {
+        setState(() {
+          _shopOpen = true;
+        });
+        _shopController.forward();
+      }
+
+      void _closeShop() {
+        _shopController.reverse().then((_) {
+          if (mounted) {
+            setState(() {
+              _shopOpen = false;
+            });
+          }
+        });
+      }
     double? _heading;
   Position? _position;
   String? _error;
@@ -76,23 +97,6 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _mapController = MapController();
-    _loadLocations();
-    _determinePosition();
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.bestForNavigation),
-    );
-    _positionStream!.listen((Position pos) {
-      setState(() {
-        _position = pos;
-      });
-      // Optionally move the map to the new position automatically:
-      _mapController.move(LatLng(pos.latitude, pos.longitude), _mapController.camera.zoom);
-    });
-  }
 
   Future<void> _determinePosition() async {
     bool serviceEnabled;
@@ -142,8 +146,21 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   late final Animation<Offset> _profileOffset;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  void initState() {
+    super.initState();
+    _mapController = MapController();
+    _loadLocations();
+    _determinePosition();
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.bestForNavigation),
+    );
+    _positionStream!.listen((Position pos) {
+      setState(() {
+        _position = pos;
+      });
+      _mapController.move(LatLng(pos.latitude, pos.longitude), _mapController.camera.zoom);
+    });
+
     // Animation setup
     _profileController = AnimationController(
       vsync: this,
@@ -154,6 +171,18 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _profileController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _shopController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _shopOffset = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _shopController,
       curve: Curves.easeOutCubic,
     ));
 
@@ -185,6 +214,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   @override
   void dispose() {
     _profileController.dispose();
+    _shopController.dispose();
     super.dispose();
   }
 
@@ -288,7 +318,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
           ],
         ),
         // Pill-shaped segmented control at bottom
-        if (!_profileOpen)
+        if (!_profileOpen && !_shopOpen)
           Positioned(
             left: 0,
             right: 0,
@@ -332,9 +362,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                           icon: const Icon(Icons.store, color: Colors.green, size: 36),
                           splashRadius: 36,
                           iconSize: 36,
-                          onPressed: () {
-                            // TODO: Switch to shop tab
-                          },
+                          onPressed: _showShop,
                         ),
                         // Center segment (dual-purpose)
                         Container(
@@ -389,6 +417,112 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                   ),
                 );
               },
+            ),
+          ),
+
+        // Shop pull-up menu overlay (always at top level in Stack)
+        if (_shopOpen)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            top: MediaQuery.of(context).size.height * 0.2, // 80% height
+            child: SlideTransition(
+              position: _shopOffset,
+              child: GestureDetector(
+                onVerticalDragUpdate: (details) {
+                  if (details.primaryDelta != null && details.primaryDelta! > 10) {
+                    _closeShop();
+                  }
+                },
+                child: Material(
+                  color: Colors.white,
+                  elevation: 12,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 24),
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Shop menu content (placeholder)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Column(
+                                children: [
+                                  const SizedBox(height: 8),
+                                  Center(
+                                    child: Icon(Icons.store, size: 48, color: Colors.green),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Center(
+                                    child: Text(
+                                      'Shop',
+                                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Divider(thickness: 1.5),
+                                  const SizedBox(height: 24),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+                                    child: Center(
+                                      child: Text(
+                                        'Shop content goes here!',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey,
+                                          fontWeight: FontWeight.w400,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // X button (center, inside menu)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 32.0, top: 8.0),
+                        child: GestureDetector(
+                          onTap: _closeShop,
+                          child: Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.close, size: 40, color: Colors.black),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         // Custom pull-up menu overlay
