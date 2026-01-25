@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'dart:math' as math;
 import 'package:trashymap/cone_painter.dart';
 import 'package:flutter_compass/flutter_compass.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 void main() {
@@ -46,11 +47,30 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
   final List<LatLng> _locations = [];
 
+  Future<void> _saveLocations() async {
+    final prefs = await SharedPreferences.getInstance();
+    final locStrings = _locations.map((loc) => '${loc.latitude},${loc.longitude}').toList();
+    await prefs.setStringList('locations', locStrings);
+  }
+
+  Future<void> _loadLocations() async {
+    final prefs = await SharedPreferences.getInstance();
+    final locStrings = prefs.getStringList('locations') ?? [];
+    setState(() {
+      _locations.clear();
+      _locations.addAll(locStrings.map((str) {
+        final parts = str.split(',');
+        return LatLng(double.parse(parts[0]), double.parse(parts[1]));
+      }));
+    });
+  }
+
   void reportLocation() {
     if (_position == null) return;
     setState(() {
       _locations.add(LatLng(_position!.latitude, _position!.longitude));
     });
+    _saveLocations();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Location reported!')),
     );
@@ -60,6 +80,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     _mapController = MapController();
+    _loadLocations();
     _determinePosition();
     _positionStream = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(accuracy: LocationAccuracy.bestForNavigation),
@@ -344,6 +365,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                                     setState(() {
                                       _locations.removeAt(nearestIdx!);
                                     });
+                                    _saveLocations();
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(content: Text('Trashcan marker removed.')),
                                     );
