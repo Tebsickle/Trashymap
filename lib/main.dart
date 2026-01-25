@@ -226,6 +226,13 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     if (_position == null) {
       return const Center(child: CircularProgressIndicator());
     }
+    // Get map rotation angle in radians
+    double mapRotation = 0.0;
+    try {
+      mapRotation = -1 * _mapController.camera.rotation * (math.pi / 180);
+    } catch (_) {
+      mapRotation = 0.0;
+    }
     return Stack(
       children: [
         FlutterMap(
@@ -233,6 +240,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
           options: MapOptions(
             initialCenter: LatLng(_position!.latitude, _position!.longitude),
             initialZoom: 18.0,
+            maxZoom: 20,
             interactionOptions: const InteractionOptions(
               flags: InteractiveFlag.all,
             ),
@@ -316,6 +324,36 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
               ],
             ),
           ],
+        ),
+        // Compass in top right (rotates with map, not device)
+        Positioned(
+          top: 32,
+          right: 24,
+          child: IgnorePointer(
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.10),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+              child: Transform.rotate(
+                angle: -mapRotation,
+                child: Image.asset(
+                  'compass_needle.png',
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
         ),
         // Pill-shaped segmented control at bottom
         if (!_profileOpen && !_shopOpen)
