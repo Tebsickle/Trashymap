@@ -152,7 +152,10 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     _loadLocations();
     _determinePosition();
     _positionStream = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.bestForNavigation),
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 0, // update as frequently as possible
+      ),
     );
     _positionStream!.listen((Position pos) {
       setState(() {
@@ -368,7 +371,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                   final user = LatLng(_position!.latitude, _position!.longitude);
                   for (final loc in _locations) {
                     final dist = Distance().as(LengthUnit.Meter, user, loc);
-                    if (dist < 30) {
+                    if (dist < 3) { // even smaller threshold
                       nearTrashcan = true;
                       break;
                     }
@@ -427,7 +430,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                                       nearestIdx = i;
                                     }
                                   }
-                                  if (nearestIdx != null && minDist < 30) {
+                                  if (nearestIdx != null && minDist < 3) { // even smaller threshold
                                     setState(() {
                                       _locations.removeAt(nearestIdx!);
                                     });
